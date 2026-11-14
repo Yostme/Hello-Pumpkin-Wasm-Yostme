@@ -11,7 +11,7 @@ impl Plugin for HelloPlugin {
         PluginMetadata {
             name: "Hello Plugin".into(),
             version: env!("CARGO_PKG_VERSION").into(),
-            authors: vec!["Bjorn".into()],
+            authors: vec!["Yostme".into()],
             description: "A simple example plugin".into(),
             dependencies: vec![],
             permissions: vec![],
