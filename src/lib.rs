@@ -1,47 +1,5 @@
-use pumpkin_plugin_api::{
-    Context, Plugin, PluginMetadata, Server,
-    command::{Command, CommandError, CommandNode, CommandSender, ConsumedArgs},
-    commands::CommandHandler,
-    events::{EventData, EventHandler, EventPriority, PlayerJoinEvent, PlayerLeaveEvent},
-    permission::{Permission, PermissionDefault},
-    text::{NamedColor, TextComponent},
-};
-
-use rand::{Rng as _, rng};
+use pumpkin_plugin_api::{Context, Plugin, PluginMetadata};
 use tracing::*;
-
-struct MyJoinHandler;
-impl EventHandler<PlayerJoinEvent> for MyJoinHandler {
-    fn handle<'a>(
-        &'a self,
-        server: Server,
-        mut event: EventData<PlayerJoinEvent>,
-    ) -> EventData<PlayerJoinEvent> {
-        tracing::info!("Player joined with ID: {}", event.player.get_id());
-        tracing::info!("Difficulty upon player join: {:?}", server.get_difficulty());
-
-        event.join_message = TextComponent::text("Hello, world!");
-        event
-    }
-}
-
-struct MyLeaveHandler;
-impl EventHandler<PlayerLeaveEvent> for MyLeaveHandler {
-    fn handle<'a>(
-        &'a self,
-        server: Server,
-        mut event: EventData<PlayerLeaveEvent>,
-    ) -> EventData<PlayerLeaveEvent> {
-        tracing::info!("Player left with ID: {}", event.player.get_id());
-        tracing::info!(
-            "Difficulty upon player leave: {:?}",
-            server.get_difficulty()
-        );
-
-        event.leave_message = TextComponent::text("Bye, world!");
-        event
-    }
-}
 
 struct HelloPlugin;
 impl Plugin for HelloPlugin {
@@ -51,7 +9,7 @@ impl Plugin for HelloPlugin {
 
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
-            name: "hello-pumpkin".into(),
+            name: "Hello Plugin".into(),
             version: env!("CARGO_PKG_VERSION").into(),
             authors: vec!["Bjorn".into()],
             description: "A simple example plugin".into(),
@@ -60,122 +18,15 @@ impl Plugin for HelloPlugin {
         }
     }
 
-    fn on_load(&mut self, context: Context) -> pumpkin_plugin_api::Result<()> {
+    fn on_load(&self, _context: Context) -> pumpkin_plugin_api::Result<()> {
         info!("Hello from the example plugin!");
-        let server = context.get_server();
-        let difficulty = server.get_difficulty();
-        info!("Current difficulty is: {:?}", difficulty);
-        context.register_event_handler(MyJoinHandler, EventPriority::Normal, true)?;
-        context.register_event_handler(MyLeaveHandler, EventPriority::Normal, true)?;
-
-        let command = Command::new(
-            &["rps".to_string(), "rockpaperscissors".to_string()],
-            "Play Rock Paper Scissors with the server.",
-        );
-
-        command
-            .then(CommandNode::literal("rock").execute(RockPaperScissorsExecutor(Choice::Rock)))
-            .then(CommandNode::literal("paper").execute(RockPaperScissorsExecutor(Choice::Paper)))
-            .then(
-                CommandNode::literal("scissors")
-                    .execute(RockPaperScissorsExecutor(Choice::Scissors)),
-            );
-
-        let permission = Permission {
-            node: "hello-pumpkin:command.rockpaperscisors".to_string(),
-            description: "Allows the player to play rock paper scisors".to_string(),
-            default: PermissionDefault::Allow,
-            children: Vec::new(),
-        };
-
-        context.register_permission(&permission)?;
-        context.register_command(command, "hello-pumpkin:command.rockpaperscisors");
         Ok(())
     }
 
-    fn on_unload(&mut self, _context: Context) -> pumpkin_plugin_api::Result<()> {
+    fn on_unload(&self, _context: Context) -> pumpkin_plugin_api::Result<()> {
         info!("Example plugin unloaded. Goodbye!");
         Ok(())
     }
 }
 
 pumpkin_plugin_api::register_plugin!(HelloPlugin);
-
-#[derive(PartialEq, Debug, Clone, Copy)]
-enum Choice {
-    Rock,
-    Paper,
-    Scissors,
-}
-
-enum Outcome {
-    Win,
-    Lose,
-    Draw,
-}
-
-impl Choice {
-    pub fn beats(&self, other: &Choice) -> Outcome {
-        if self == other {
-            return Outcome::Draw;
-        }
-
-        match (self, other) {
-            (Choice::Rock, Choice::Scissors) => Outcome::Win,
-            (Choice::Paper, Choice::Rock) => Outcome::Win,
-            (Choice::Scissors, Choice::Paper) => Outcome::Win,
-            _ => Outcome::Lose,
-        }
-    }
-}
-
-fn get_random_choice() -> Choice {
-    let choices = [Choice::Rock, Choice::Paper, Choice::Scissors];
-    let index = rng().random_range(0..3);
-    choices[index]
-}
-
-struct RockPaperScissorsExecutor(Choice);
-impl CommandHandler for RockPaperScissorsExecutor {
-    fn handle(
-        &self,
-        sender: CommandSender,
-        _server: Server,
-        _args: ConsumedArgs,
-    ) -> Result<i32, CommandError> {
-        let player_choice = self.0;
-        let computer_choice = get_random_choice();
-
-        let you_chose = TextComponent::text("You chose: ");
-        you_chose
-            .add_child(TextComponent::text(&format!("{:?}", player_choice)))
-            .color_named(NamedColor::Aqua);
-        sender.send_message(you_chose);
-
-        let i_chose = TextComponent::text("I chose: ");
-        i_chose
-            .add_child(TextComponent::text(&format!("{:?}", computer_choice)))
-            .color_named(NamedColor::Gold);
-        sender.send_message(i_chose);
-
-        match player_choice.beats(&computer_choice) {
-            Outcome::Win => {
-                let message = TextComponent::text("You win!");
-                message.color_named(NamedColor::Green);
-                sender.send_message(message);
-            }
-            Outcome::Lose => {
-                let message = TextComponent::text("You lose!");
-                message.color_named(NamedColor::Red);
-                sender.send_message(message);
-            }
-            Outcome::Draw => {
-                let message = TextComponent::text("It's a tie!");
-                message.color_named(NamedColor::Yellow);
-                sender.send_message(message);
-            }
-        }
-
-        Ok(1)
-    }
-}
