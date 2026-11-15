@@ -1,32 +1,41 @@
 use pumpkin_plugin_api::{Context, Plugin, PluginMetadata};
 use tracing::*;
 
-struct HelloPlugin;
-impl Plugin for HelloPlugin {
+mod listeners;
+mod commands;
+
+struct EssentialsPlugin;
+impl Plugin for EssentialsPlugin {
     fn new() -> Self {
-        HelloPlugin
+        Self
     }
 
     fn metadata(&self) -> PluginMetadata {
         PluginMetadata {
-            name: "Hello Plugin".into(),
+            name: "essentials".into(),
             version: env!("CARGO_PKG_VERSION").into(),
             authors: vec!["Yostme".into()],
-            description: "A simple example plugin".into(),
+            description: "A plugin with essential commands built for Pumpkin.".into(),
             dependencies: vec![],
             permissions: vec![],
         }
     }
 
-    fn on_load(&self, _context: Context) -> pumpkin_plugin_api::Result<()> {
-        info!("Hello from the example plugin!");
+    fn on_load(&self, context: Context) -> pumpkin_plugin_api::Result<()> {
+        // plugin load message
+        info!("Essentials plugin successfully loaded!");
+        // start listeners
+        listeners::init(&context)?;
+        // start commands
+        commands::init(&context)?;
         Ok(())
     }
 
     fn on_unload(&self, _context: Context) -> pumpkin_plugin_api::Result<()> {
-        info!("Example plugin unloaded. Goodbye!");
+        // plugin unload message
+        info!("Essentials plugin unloaded. Goodbye!");
         Ok(())
     }
 }
 
-pumpkin_plugin_api::register_plugin!(HelloPlugin);
+pumpkin_plugin_api::register_plugin!(EssentialsPlugin);
