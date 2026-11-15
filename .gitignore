@@ -1,1 +1,4 @@
+# Build files
 /target
+# Test server
+/run
